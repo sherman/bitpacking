@@ -228,7 +228,7 @@ mod scalar {
 
     impl Available for UnsafeBitPackerImpl {
         fn available() -> bool {
-            false
+            true
         }
     }
 }
