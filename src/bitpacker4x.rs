@@ -73,7 +73,8 @@ mod sse3 {
 
     impl Available for UnsafeBitPackerImpl {
         fn available() -> bool {
-            is_x86_feature_detected!("sse3")
+            //is_x86_feature_detected!("sse3")
+            false
         }
     }
 }
