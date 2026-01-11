@@ -304,8 +304,8 @@ fn criterion_benchmark_bitpacker<TBitPacker: BitPacker + 'static>(
 }
 
 fn criterion_benchmark(criterion: &mut Criterion) {
-    criterion_benchmark_bitpacker("BitPacker1x", BitPacker1x::new(), criterion);
-    criterion_benchmark_bitpacker("BitPacker4x", BitPacker4x::new(), criterion);
+    //criterion_benchmark_bitpacker("BitPacker1x", BitPacker1x::new(), criterion);
+    //criterion_benchmark_bitpacker("BitPacker4x", BitPacker4x::new(), criterion);
     criterion_benchmark_bitpacker("BitPacker8x", BitPacker8x::new(), criterion);
 }
 

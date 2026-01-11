@@ -11,7 +11,6 @@ mod avx2 {
     use super::BLOCK_LEN;
     use crate::Available;
 
-    use std::arch::x86_64::__m256i as DataType;
     use std::arch::x86_64::_mm256_and_si256 as op_and;
     use std::arch::x86_64::_mm256_lddqu_si256 as load_unaligned;
     use std::arch::x86_64::_mm256_or_si256 as op_or;
@@ -19,6 +18,10 @@ mod avx2 {
     use std::arch::x86_64::_mm256_slli_epi32 as left_shift_32;
     use std::arch::x86_64::_mm256_srli_epi32 as right_shift_32;
     use std::arch::x86_64::_mm256_storeu_si256 as store_unaligned;
+    use std::arch::x86_64::{
+        __m256i as DataType, _mm256_castsi256_si128, _mm256_extracti128_si256,
+        _mm256_inserti128_si256, _mm256_setzero_si256, _mm_extract_epi32, _mm_set1_epi32,
+    };
 
     use std::arch::x86_64::{
         _mm256_add_epi32, _mm256_extract_epi32, _mm256_permute2f128_si256, _mm256_shuffle_epi32,
@@ -65,6 +68,38 @@ mod avx2 {
         _mm256_add_epi32(high_offset, offseted_halved_prefix_sum)
     }
 
+    /// Inclusive scan (Hillis–Steele) for 8 elements on top of SIMD instructions
+    #[allow(non_snake_case)]
+    unsafe fn scan8_hillis_steele_i32(delta: DataType) -> DataType {
+        // step 1 (shift by 1 element) within each 128-bit lane and add delta
+        // shift operation: delta<<1 = [ 0, a, b, c | 0, e, f, g ]
+        // add operation: delta + (delta<<1) = [ a, (b+a), (c+b), (d+c) | e, (f+e), (g+f), (h+g) ]
+        let t1 = _mm256_add_epi32(delta, _mm256_slli_si256::<4>(delta));
+
+        // step 2 (shift by 2 elements) within each 128-bit lane and add t1
+        // shift operation: t1<<2 = [ 0, 0, t1[0], t1[1] | 0, 0, t1[4], t1[5] ] = [ 0, 0, a, (a+b) | 0, 0, e, (e+f) ]
+        // add operation: t2 = [ a, (a+b), (a+b+c), (a+b+c+d) | e, (e+f), (e+f+g), (e+f+g+h) ]
+        let t2 = _mm256_add_epi32(t1, _mm256_slli_si256::<8>(t1));
+
+        // step 4 (carry a low lane sum into a high lane)
+        let low128 = _mm256_castsi256_si128(t2);
+        let carry = _mm_extract_epi32(low128, 3); // a+b+c+d
+
+        // [0 0 0 0 | carry carry carry carry]
+        let carry128 = _mm_set1_epi32(carry);
+        // carry_hi = [0 0 0 0 | carry carry carry carry]
+        let carry_hi = _mm256_inserti128_si256(_mm256_setzero_si256(), carry128, 1);
+
+        //out = [ a, (a+b), (a+b+c), (a+b+c+d) | (carry+e), (carry+e+f), (carry+e+f+g), (carry+e+f+g+h) ]
+        _mm256_add_epi32(t2, carry_hi)
+    }
+
+    #[allow(non_snake_case)]
+    unsafe fn last_lane_u32(local_prefix_sum_vector: DataType) -> u32 {
+        let hi128 = _mm256_extracti128_si256(local_prefix_sum_vector, 1);
+        _mm_extract_epi32(hi128, 3) as u32
+    }
+
     unsafe fn add(left: DataType, right: DataType) -> DataType {
         _mm256_add_epi32(left, right)
     }
@@ -73,7 +108,7 @@ mod avx2 {
         _mm256_sub_epi32(left, right)
     }
 
-    declare_bitpacker!(target_feature(enable = "avx2"));
+    declare_bitpacker_avx2!(target_feature(enable = "avx2"));
 
     impl Available for UnsafeBitPackerImpl {
         fn available() -> bool {
@@ -184,6 +219,34 @@ mod scalar {
         [el0, el1, el2, el3, el4, el5, el6, el7]
     }
 
+    /// Inclusive scan (Hillis–Steele) for 8 elements:
+    ///
+    /// step 1: out[i] += out[i-1]
+    /// step 2: out[i] += out[i-2]
+    /// step 4: out[i] += out[i-4]
+    fn scan8_hillis_steele_i32(delta: DataType) -> DataType {
+        let mut out = delta;
+
+        // shift 1
+        for i in (1..8).rev() {
+            out[i] = out[i].wrapping_add(out[i - 1]);
+        }
+        // shift 2
+        for i in (2..8).rev() {
+            out[i] = out[i].wrapping_add(out[i - 2]);
+        }
+        // shift 4
+        for i in (4..8).rev() {
+            out[i] = out[i].wrapping_add(out[i - 4]);
+        }
+
+        out
+    }
+
+    fn last_lane_u32(v: DataType) -> u32 {
+        v[7]
+    }
+
     fn add(left: DataType, right: DataType) -> DataType {
         [
             left[0].wrapping_add(right[0]),
@@ -214,7 +277,7 @@ mod scalar {
     //
     // For other bitpacker, we enable specific CPU instruction set, but for the
     // scalar bitpacker none is required.
-    declare_bitpacker!(cfg(any(debug, not(debug))));
+    declare_bitpacker_avx2!(cfg(any(debug, not(debug))));
 
     impl Available for UnsafeBitPackerImpl {
         fn available() -> bool {

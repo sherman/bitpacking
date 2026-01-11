@@ -39,6 +39,8 @@ pub(crate) mod tests;
 mod macros;
 #[macro_use]
 mod macros_simple;
+#[macro_use]
+mod macros_avx2;
 
 trait Available {
     fn available() -> bool;
@@ -185,6 +187,7 @@ pub trait BitPacker: Sized + Clone + Copy {
     /// Number of `u32` per compressed block
     const BLOCK_LEN: usize;
 
+    /// Checks the available instructions set on the current
     /// Checks the available instructions set on the current
     /// CPU and returns the best available implementation.
     ///

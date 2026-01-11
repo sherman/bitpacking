@@ -1,7 +1,7 @@
 use rand::distributions::{Distribution as _, Uniform};
 use rand::rngs::StdRng;
 use rand::SeedableRng as _;
-use super::most_significant_bit;
+use super::{most_significant_bit, BitPacker, BitPacker8x};
 use super::UnsafeBitPacker;
 
 pub fn generate_array(n: usize, max_num_bits: u8) -> Vec<u32> {
