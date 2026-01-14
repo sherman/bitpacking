@@ -188,7 +188,6 @@ pub trait BitPacker: Sized + Clone + Copy {
     const BLOCK_LEN: usize;
 
     /// Checks the available instructions set on the current
-    /// Checks the available instructions set on the current
     /// CPU and returns the best available implementation.
     ///
     /// Calling `.new()` is extremely cheap, and does not
