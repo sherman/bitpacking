@@ -36,6 +36,8 @@ use std::marker::Sized;
 pub(crate) mod tests;
 
 #[macro_use]
+mod macros_common;
+#[macro_use]
 mod macros;
 #[macro_use]
 mod macros_simple;
