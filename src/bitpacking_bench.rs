@@ -238,9 +238,9 @@ fn criterion_benchmark_bitpacker<TBitPacker: BitPacker + 'static>(
     bitpacker: TBitPacker,
     criterion: &mut Criterion,
 ) {
-    for num_bit in [1u8, 2u8, 24u8, 31u8] {
+    for num_bit in [1u8/*, 2u8, 24u8, 31u8*/] {
         let num_bits = [num_bit; NUM_BLOCKS];
-        criterion.bench(
+        /*criterion.bench(
             name,
             Benchmark::new(format!("decompress-{num_bit}").as_str(), move |b| {
                 bench_decompress_util::<TBitPacker>(bitpacker, b, &num_bits[..]);
@@ -248,7 +248,7 @@ fn criterion_benchmark_bitpacker<TBitPacker: BitPacker + 'static>(
             .throughput(Throughput::Elements(
                 (NUM_BLOCKS * TBitPacker::BLOCK_LEN) as u64,
             )),
-        );
+        );*/
         criterion.bench(
             name,
             Benchmark::new(format!("decompress-delta-{num_bit}").as_str(), move |b| {
@@ -258,7 +258,7 @@ fn criterion_benchmark_bitpacker<TBitPacker: BitPacker + 'static>(
                 (NUM_BLOCKS * TBitPacker::BLOCK_LEN) as u64,
             )),
         );
-        criterion.bench(
+        /*criterion.bench(
             name,
             Benchmark::new(
                 format!("decompress-strict-delta-{num_bit}").as_str(),
@@ -299,7 +299,7 @@ fn criterion_benchmark_bitpacker<TBitPacker: BitPacker + 'static>(
             .throughput(Throughput::Elements(
                 (NUM_BLOCKS * TBitPacker::BLOCK_LEN) as u64,
             )),
-        );
+        );*/
     }
 }
 
